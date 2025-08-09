@@ -34,7 +34,12 @@ export default function PortfolioPage() {
         const results = await Promise.all(
           configs.map(async (c) => {
             try {
-              const client = createPublicClient({ chain: c.chain, transport: http() });
+              const rpc = c.chainId === 8453
+                ? (process.env.NEXT_PUBLIC_BASE_RPC || "https://base-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+                : c.chainId === 10
+                ? (process.env.NEXT_PUBLIC_OPTIMISM_RPC || "https://opt-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+                : undefined;
+              const client = createPublicClient({ chain: c.chain, transport: http(rpc) });
               const bal = await client.readContract({ address: c.token, abi: erc20Abi, functionName: "balanceOf", args: [address as `0x${string}`] });
               const num = Number(bal) / 1_000_000;
               return { chainId: c.chainId, value: num };

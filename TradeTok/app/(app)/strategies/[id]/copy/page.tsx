@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAccount, useChainId, useSwitchChain, useWalletClient } from "wagmi";
 import { createPublicClient, http, erc20Abi, parseEther, encodeFunctionData } from "viem";
-import { base, mainnet } from "viem/chains";
+import { base, mainnet, optimism, arbitrum } from "viem/chains";
 import {
   Transaction,
   TransactionButton,
@@ -35,6 +35,8 @@ export default function CopyPage() {
   const [execTx, setExecTx] = useState<{ to: `0x${string}`; data: `0x${string}`; value: bigint; chainId: number } | null>(null);
   const [executing, setExecuting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -51,18 +53,24 @@ export default function CopyPage() {
   const USDC_ADDRESSES: Record<number, `0x${string}`> = {
     8453: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", // Base USDC
     1: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Mainnet USDC
-    10:"0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"
+    10: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", // Optimism USDC
+    42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // Arbitrum USDC
   };
 
   async function getUsdcBalance(chainId: number, user: `0x${string}`): Promise<bigint> {
-    const chain = chainId === 8453 ? base : mainnet;
-    const client = createPublicClient({ chain, transport: http() });
+    const chain = chainId === 8453 ? base : chainId === 1 ? mainnet : chainId === 10 ? optimism : chainId === 42161 ? arbitrum : base;
+    const rpc = chainId === 8453
+      ? (process.env.NEXT_PUBLIC_BASE_RPC || "https://base-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+      : chainId === 10
+      ? (process.env.NEXT_PUBLIC_OPTIMISM_RPC || "https://opt-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+      : undefined;
+    const client = createPublicClient({ chain, transport: http(rpc) });
     const token = USDC_ADDRESSES[chainId];
     return await client.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [user] });
   }
 
   async function findSourceChainForUsdc(amountMicro: bigint, user: `0x${string}`): Promise<{ chainId: number; token: `0x${string}` } | null> {
-    const chains = [8453, 1];
+    const chains = [8453, 10, 42161, 1];
     for (const cid of chains) {
       try {
         const bal = await getUsdcBalance(cid, user);
@@ -73,8 +81,13 @@ export default function CopyPage() {
   }
 
   async function checkAllowance(chainId: number, token: `0x${string}`, owner: `0x${string}`, spenderAddr: `0x${string}`, amount: bigint) {
-    const chain = chainId === 8453 ? base : mainnet;
-    const client = createPublicClient({ chain, transport: http() });
+    const chain = chainId === 8453 ? base : chainId === 1 ? mainnet : chainId === 10 ? optimism : chainId === 42161 ? arbitrum : base;
+    const rpc = chainId === 8453
+      ? (process.env.NEXT_PUBLIC_BASE_RPC || "https://base-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+      : chainId === 10
+      ? (process.env.NEXT_PUBLIC_OPTIMISM_RPC || "https://opt-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+      : undefined;
+    const client = createPublicClient({ chain, transport: http(rpc) });
     const allowance = await client.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, spenderAddr] });
     return (allowance as bigint) < amount;
   }
@@ -110,7 +123,7 @@ export default function CopyPage() {
             onChange={(e) => setAmountUsdc(e.target.value)}
             className="w-full px-3 py-2 bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-md"
           />
-          <p className="mt-1 text-[10px] text-[var(--app-foreground-muted)]">Finds USDC on Base/Mainnet and estimates USDC→ETH to Base.</p>
+          <p className="mt-1 text-[10px] text-[var(--app-foreground-muted)]">Finds USDC on Base/Optimism/Arbitrum/Mainnet and estimates USDC→ETH to Base.</p>
         </div>
         <div className="flex items-center justify-between">
           <button
@@ -184,15 +197,33 @@ export default function CopyPage() {
             {currentChainId !== src.chainId && (
               <button
                 type="button"
-                onClick={async () => { try { await switchChainAsync({ chainId: src.chainId }); } catch (e) { console.warn('[switch] error', e); } }}
-                className="w-full h-10 rounded-md border border-[var(--app-card-border)] hover:bg-[var(--app-accent-light)] text-sm"
+                disabled={switching}
+                onClick={async () => {
+                  if (!src) return;
+                  setSwitchError(null);
+                  setSwitching(true);
+                  try {
+                    await switchChainAsync({ chainId: src.chainId });
+                  } catch (e) {
+                    console.warn('[switch] error', e);
+                    setSwitchError('Wallet did not switch. Open your wallet, switch network manually, then return.');
+                  } finally {
+                    setSwitching(false);
+                  }
+                }}
+                className="w-full h-10 rounded-md border border-[var(--app-card-border)] hover:bg-[var(--app-accent-light)] text-sm disabled:opacity-50"
               >
-                Switch to {src.chainId === 8453 ? "Base" : src.chainId === 1 ? "Mainnet" : `Chain ${src.chainId}`}
+                {switching ? 'Switching…' : `Switch to ${src.chainId === 8453 ? 'Base' : src.chainId === 1 ? 'Mainnet' : src.chainId === 10 ? 'Optimism' : src.chainId === 42161 ? 'Arbitrum' : `Chain ${src.chainId}`}`}
               </button>
+            )}
+
+            {switchError && (
+              <div className="text-[11px] text-red-500">{switchError}</div>
             )}
 
             {needsApproval && currentChainId === src.chainId && (
               <Transaction
+                chainId={src.chainId}
                 calls={[{
                   to: src.token,
                   data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender!, BigInt(Math.round(Number(amountUsdc) * 1_000_000))] }) as `0x${string}`,
@@ -224,12 +255,33 @@ export default function CopyPage() {
                   try {
                     setExecuting(true);
                     console.log('[execute] sending tx', { to: execTx.to, value: execTx.value.toString() });
-                    const hash = await walletClient.sendTransaction({
-                      to: execTx.to,
-                      data: execTx.data,
-                      value: execTx.value,
-                      account: address as `0x${string}`,
-                    });
+                    const targetChain = execTx.chainId === 8453 ? base : execTx.chainId === 1 ? mainnet : execTx.chainId === 10 ? optimism : execTx.chainId === 42161 ? arbitrum : undefined;
+                    let hash: `0x${string}`;
+                    if (execTx.chainId === 10 || execTx.chainId === 42161) {
+                      // Force legacy tx on OP/Arb to avoid eth_createAccessList
+                      const rpc = execTx.chainId === 10
+                        ? (process.env.NEXT_PUBLIC_OPTIMISM_RPC || "https://opt-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
+                        : undefined;
+                      const pc = createPublicClient({ chain: targetChain!, transport: http(rpc) });
+                      const gasPrice = await pc.getGasPrice();
+                      hash = await walletClient.sendTransaction({
+                        to: execTx.to,
+                        data: execTx.data,
+                        value: execTx.value,
+                        account: address as `0x${string}`,
+                        chain: targetChain,
+                        type: 'legacy',
+                        gasPrice,
+                      });
+                    } else {
+                      hash = await walletClient.sendTransaction({
+                        to: execTx.to,
+                        data: execTx.data,
+                        value: execTx.value,
+                        account: address as `0x${string}`,
+                        chain: targetChain,
+                      });
+                    }
                     console.info('[execute] txHash', hash);
                     setShowSuccess(true);
                     setTimeout(() => setShowSuccess(false), 2000);
