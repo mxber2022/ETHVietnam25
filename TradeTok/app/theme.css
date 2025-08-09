@@ -105,6 +105,16 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+  }
 }
 
 .animate-fade-in {
