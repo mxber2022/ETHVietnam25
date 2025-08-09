@@ -1,21 +1,33 @@
 "use client";
-import { mockStrategies } from "@/lib/mock";
+import { useEffect, useState } from "react";
 import VideoSlide from "@/app/components/Video/VideoSlide";
 import ActionBar from "@/app/components/Video/ActionBar";
 
+type FeedStrategy = { id: string; title: string; videoUrl: string; riskLevel: string; createdAt: string };
+
 export default function FeedPage() {
+  const [items, setItems] = useState<FeedStrategy[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/strategies", { cache: "no-store" });
+        const json = await res.json();
+        setItems(json.strategies || []);
+      } catch {}
+    };
+    load();
+  }, []);
+
   return (
     <div className="fixed top-0 bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md no-scrollbar overflow-y-scroll snap-y snap-mandatory overflow-x-hidden">
       <div className="relative">
-        {mockStrategies.map((s) => (
+        {items.map((s) => (
           <VideoSlide key={s.id} src={s.videoUrl ?? ""} className="snap-start bg-black">
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute left-3 right-16 bottom-24 text-white">
-              <div className="text-[11px] opacity-90">{s.tokenSymbol} • {s.riskLevel}</div>
+              <div className="text-[11px] opacity-90">{s.riskLevel}</div>
               <h3 className="text-[17px] font-semibold leading-tight drop-shadow">{s.title}</h3>
-              {s.description && (
-                <p className="text-[11px] opacity-90 line-clamp-2">{s.description}</p>
-              )}
             </div>
             <ActionBar
               strategyId={s.id}
