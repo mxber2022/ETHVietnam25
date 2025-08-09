@@ -23,7 +23,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const rpcUrl = process.env.BASE_RPC_URL || process.env.NEXT_PUBLIC_BASE_RPC_URL;
+    const rpcUrl =
+      process.env.BASE_RPC_URL ||
+      process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+      "https://base-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t";
     const client = createPublicClient({ chain: base, transport: http(rpcUrl) });
 
     let total = 0n;

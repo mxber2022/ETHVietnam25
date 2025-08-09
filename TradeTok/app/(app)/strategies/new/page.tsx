@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Transaction,
@@ -31,6 +32,7 @@ type Risk = "Low" | "Medium" | "High";
 
 export default function NewStrategyPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -100,6 +102,10 @@ export default function NewStrategyPage() {
       return [];
     }
   }, [canPublish, entryMax, entryMin, risk, stopLoss, strategyUri, title, tokenAddress]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -296,11 +302,17 @@ export default function NewStrategyPage() {
               className="h-11 w-full rounded-lg bg-[var(--app-accent)] text-[var(--app-background)] text-sm font-medium hover:bg-[var(--app-accent-hover)] disabled:opacity-50"
               disabled={!canPublish}
             />
-            <TransactionToast className="mt-2">
-              <TransactionToastIcon />
-              <TransactionToastLabel />
-              <TransactionToastAction />
-            </TransactionToast>
+            {mounted &&
+              createPortal(
+                <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+56px)] z-[60] w-[calc(100%-32px)] max-w-md px-2">
+                  <TransactionToast className="w-full">
+                    <TransactionToastIcon />
+                    <TransactionToastLabel />
+                    <TransactionToastAction />
+                  </TransactionToast>
+                </div>,
+                document.body,
+              )}
           </Transaction>
         </div>
 

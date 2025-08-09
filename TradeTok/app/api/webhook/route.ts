@@ -5,7 +5,7 @@ import {
 import { sendFrameNotification } from "@/lib/notification-client";
 import { http } from "viem";
 import { createPublicClient } from "viem";
-import { optimism } from "viem/chains";
+import { optimism, base } from "viem/chains";
 
 const appName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME;
 
@@ -35,8 +35,8 @@ const KEY_REGISTRY_ABI = [
 
 async function verifyFidOwnership(fid: number, appKey: `0x${string}`) {
   const client = createPublicClient({
-    chain: optimism,
-    transport: http(),
+    chain: base,
+    transport: http("https://base-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t"),
   });
 
   try {
