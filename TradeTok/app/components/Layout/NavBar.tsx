@@ -35,23 +35,28 @@ export default function NavBar() {
   const pathname = usePathname();
   return (
     <nav className="fixed z-50 left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+16px)]">
-      <div className="bg-gradient-to-r from-black/30 to-[var(--app-card-bg)]/95 border border-[var(--app-accent)] shadow-xl rounded-full p-1.5 flex items-center gap-1.5 backdrop-blur">
-        {tabs.map((t) => {
+      <div className="relative bg-gradient-to-r from-black/25 via-black/10 to-transparent border border-black/20 ring-1 ring-white/10 ring-inset shadow-[0_6px_20px_rgba(0,0,0,0.12)] rounded-full p-1.5 flex items-center gap-1.5 backdrop-blur-lg backdrop-saturate-200 overflow-hidden bg-clip-padding">
+        <div className="pointer-events-none absolute top-0.5 left-2 right-2 h-2 rounded-full bg-gradient-to-r from-white/25 via-white/10 to-transparent blur-sm opacity-50" />
+        {tabs.map((t, i) => {
           const active = pathname?.startsWith(t.href);
           return (
-            <Link
-              key={t.href}
-              href={t.href}
-              aria-label={t.label}
-              className={`flex items-center gap-2 px-3 py-2 rounded-full transition-colors min-w-[40px] min-h-[40px] ${
-                active
-                  ? "bg-[var(--app-accent-light)] text-[var(--app-foreground)]"
-                  : "text-[var(--app-foreground-muted)] hover:text-[var(--app-foreground)]"
-              }`}
-            >
-              <Icon name={t.icon} />
-              <span className="text-sm hidden sm:inline">{t.label}</span>
-            </Link>
+            <div key={t.href} className="flex items-center">
+              <Link
+                href={t.href}
+                aria-label={t.label}
+                className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 min-w-[40px] min-h-[40px] hover:backdrop-brightness-110 active:scale-95 ${
+                  active
+                    ? "bg-[var(--app-accent-light)] text-[var(--app-foreground)] ring-1 ring-[var(--app-accent)]/30"
+                    : "text-[var(--app-foreground-muted)] hover:text-[var(--app-foreground)]"
+                }`}
+              >
+                <Icon name={t.icon} />
+                <span className="text-sm hidden sm:inline">{t.label}</span>
+              </Link>
+              {i < tabs.length - 1 && (
+                <div className="mx-1 h-6 w-px bg-white/10" />
+              )}
+            </div>
           );
         })}
       </div>
