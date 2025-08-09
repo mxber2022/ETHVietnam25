@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { base, mainnet, optimism, arbitrum } from "wagmi/chains";
+import { base, mainnet, optimism, arbitrum, zircuit } from "wagmi/chains";
 import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
 import { WagmiProvider, createConfig, http } from "wagmi";
 
