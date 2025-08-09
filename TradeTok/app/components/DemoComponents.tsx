@@ -39,7 +39,7 @@ export function Button({
   icon,
 }: ButtonProps) {
   const baseClasses =
-    "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0052FF] disabled:opacity-50 disabled:pointer-events-none";
+    "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#0052FF] disabled:opacity-50 disabled:pointer-events-none";
 
   const variantClasses = {
     primary:
@@ -53,9 +53,9 @@ export function Button({
   };
 
   const sizeClasses = {
-    sm: "text-xs px-2.5 py-1.5 rounded-md",
-    md: "text-sm px-4 py-2 rounded-lg",
-    lg: "text-base px-6 py-3 rounded-lg",
+    sm: "text-xs px-2 py-1.5 rounded-md",
+    md: "text-sm px-3.5 py-2 rounded-lg",
+    lg: "text-base px-5 py-2.5 rounded-lg",
   };
 
   return (
@@ -93,20 +93,20 @@ function Card({
 
   return (
     <div
-      className={`bg-[var(--app-card-bg)] backdrop-blur-md rounded-xl shadow-lg border border-[var(--app-card-border)] overflow-hidden transition-all hover:shadow-xl ${className} ${onClick ? "cursor-pointer" : ""}`}
+      className={`bg-[var(--app-card-bg)] backdrop-blur-md rounded-xl shadow-md border border-[var(--app-card-border)] overflow-hidden transition-all hover:shadow-lg ${className} ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
       onKeyDown={onClick ? handleKeyDown : undefined}
       tabIndex={onClick ? 0 : undefined}
       role={onClick ? "button" : undefined}
     >
       {title && (
-        <div className="px-5 py-3 border-b border-[var(--app-card-border)]">
-          <h3 className="text-lg font-medium text-[var(--app-foreground)]">
+        <div className="px-3 py-2 border-b border-[var(--app-card-border)]">
+          <h3 className="text-base font-medium text-[var(--app-foreground)]">
             {title}
           </h3>
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-3">{children}</div>
     </div>
   );
 }
@@ -119,28 +119,28 @@ export function Features({ setActiveTab }: FeaturesProps) {
   return (
     <div className="space-y-6 animate-fade-in">
       <Card title="Key Features">
-        <ul className="space-y-3 mb-4">
+        <ul className="space-y-2.5 mb-3">
           <li className="flex items-start">
             <Icon name="check" className="text-[var(--app-accent)] mt-1 mr-2" />
-            <span className="text-[var(--app-foreground-muted)]">
+            <span className="text-[var(--app-foreground-muted)] text-sm">
               Minimalistic and beautiful UI design
             </span>
           </li>
           <li className="flex items-start">
             <Icon name="check" className="text-[var(--app-accent)] mt-1 mr-2" />
-            <span className="text-[var(--app-foreground-muted)]">
+            <span className="text-[var(--app-foreground-muted)] text-sm">
               Responsive layout for all devices
             </span>
           </li>
           <li className="flex items-start">
             <Icon name="check" className="text-[var(--app-accent)] mt-1 mr-2" />
-            <span className="text-[var(--app-foreground-muted)]">
+            <span className="text-[var(--app-foreground-muted)] text-sm">
               Dark mode support
             </span>
           </li>
           <li className="flex items-start">
             <Icon name="check" className="text-[var(--app-accent)] mt-1 mr-2" />
-            <span className="text-[var(--app-foreground-muted)]">
+            <span className="text-[var(--app-foreground-muted)] text-sm">
               OnchainKit integration
             </span>
           </li>
