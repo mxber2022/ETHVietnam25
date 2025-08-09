@@ -3,7 +3,17 @@ import { useEffect, useState } from "react";
 import VideoSlide from "@/app/components/Video/VideoSlide";
 import ActionBar from "@/app/components/Video/ActionBar";
 
-type FeedStrategy = { id: string; title: string; videoUrl: string; riskLevel: string; createdAt: string };
+type FeedStrategy = {
+  id: string;
+  title: string;
+  videoUrl: string;
+  riskLevel: string;
+  tokenSymbol: string | null;
+  priceUsd: number | null;
+  entryMinUsd: number;
+  entryMaxUsd: number;
+  createdAt: string;
+};
 
 export default function FeedPage() {
   const [items, setItems] = useState<FeedStrategy[]>([]);
@@ -26,7 +36,11 @@ export default function FeedPage() {
           <VideoSlide key={s.id} src={s.videoUrl ?? ""} className="snap-start bg-black">
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute left-3 right-16 bottom-24 text-white">
-              <div className="text-[11px] opacity-90">{s.riskLevel}</div>
+              <div className="text-[11px] opacity-90">
+                {s.tokenSymbol ? `${s.tokenSymbol} • ` : ""}
+                {s.priceUsd ? `$${s.priceUsd.toFixed(2)} • ` : ""}
+                {s.riskLevel} • Buy {s.entryMinUsd.toFixed(2)}–{s.entryMaxUsd.toFixed(2)} USD
+              </div>
               <h3 className="text-[17px] font-semibold leading-tight drop-shadow">{s.title}</h3>
             </div>
             <ActionBar
