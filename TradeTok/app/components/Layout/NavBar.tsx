@@ -34,7 +34,7 @@ function Icon({ name }: { name: Tab["icon"] }) {
 export default function NavBar() {
   const pathname = usePathname();
   return (
-    <nav className="fixed z-50 left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+16px)]">
+    <nav className="fixed z-50 left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+16px)] pointer-events-auto">
       <div className="relative bg-gradient-to-r from-black/25 via-black/10 to-transparent border border-black/20 ring-1 ring-white/10 ring-inset shadow-[0_6px_20px_rgba(0,0,0,0.12)] rounded-full p-1.5 flex items-center gap-1.5 backdrop-blur-lg backdrop-saturate-200 overflow-hidden bg-clip-padding">
         <div className="pointer-events-none absolute top-0.5 left-2 right-2 h-2 rounded-full bg-gradient-to-r from-white/25 via-white/10 to-transparent blur-sm opacity-50" />
         {tabs.map((t, i) => {

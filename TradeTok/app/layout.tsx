@@ -42,8 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="bg-background min-h-screen">
+    <html lang="en" className="overflow-x-hidden">
+      <body className="bg-background min-h-screen overflow-x-hidden">
         <Providers>
           <NavBar />
           {children}

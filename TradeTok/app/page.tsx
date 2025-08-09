@@ -71,8 +71,8 @@ export default function App() {
   }, [context, frameAdded, handleAddFrame]);
 
   return (
-    <div className="flex flex-col font-sans mini-app-theme">
-      <div className="w-full max-w-md mx-auto px-4 pt-3 pb-24">
+    <div className="flex flex-col font-sans mini-app-theme overflow-x-hidden">
+      <div className="w-full max-w-md mx-auto px-4 pt-3 pb-24 overflow-x-hidden">
         <header className="flex justify-between items-center mb-2 h-10">
           <div>
             <div className="flex items-center space-x-2">
