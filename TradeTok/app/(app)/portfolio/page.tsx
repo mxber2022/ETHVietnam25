@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAccount, useBalance } from "wagmi";
+import { createPublicClient, erc20Abi, http } from "viem";
+import { base, mainnet, optimism, arbitrum } from "viem/chains";
 
 type Activity = { id?: string; qtyEth: string; ts: number };
 
@@ -11,6 +13,49 @@ export default function PortfolioPage() {
   const [copied, setCopied] = useState(false);
   const { address } = useAccount();
   const { data: balance } = useBalance({ address, chainId: 8453 });
+  const [usdcBalance, setUsdcBalance] = useState<string>("-");
+  const [chainUsdcBalances, setChainUsdcBalances] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadUsdc() {
+      try {
+        if (!address) {
+          setUsdcBalance("-");
+          setChainUsdcBalances({});
+          return;
+        }
+        const configs = [
+          { chain: base, chainId: 8453, token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as `0x${string}` },
+          { chain: optimism, chainId: 10, token: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85" as `0x${string}` },
+          { chain: arbitrum, chainId: 42161, token: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as `0x${string}` },
+          { chain: mainnet, chainId: 1, token: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" as `0x${string}` },
+        ];
+        const results = await Promise.all(
+          configs.map(async (c) => {
+            try {
+              const client = createPublicClient({ chain: c.chain, transport: http() });
+              const bal = await client.readContract({ address: c.token, abi: erc20Abi, functionName: "balanceOf", args: [address as `0x${string}`] });
+              const num = Number(bal) / 1_000_000;
+              return { chainId: c.chainId, value: num };
+            } catch {
+              return { chainId: c.chainId, value: NaN };
+            }
+          })
+        );
+        if (!cancelled) {
+          const map: Record<number, string> = {};
+          results.forEach((r) => { map[r.chainId] = Number.isFinite(r.value) ? r.value.toFixed(2) : "-"; });
+          setChainUsdcBalances(map);
+          setUsdcBalance(map[8453] ?? "-");
+        }
+      } catch {
+        if (!cancelled) setUsdcBalance("-");
+      }
+    }
+    loadUsdc();
+    return () => { cancelled = true; };
+  }, [address]);
 
   async function copyAddress() {
     if (!address) return;
@@ -70,6 +115,26 @@ export default function PortfolioPage() {
           <div className="text-[10px] text-[var(--app-foreground-muted)]">ETH Balance</div>
           <div className="text-sm font-medium">{balance ? `${balance.formatted.slice(0, 8)} ${balance.symbol}` : "–"}</div>
         </div>
+        <div className="p-3 rounded-md border border-[var(--app-card-border)] bg-[var(--app-card-bg)]">
+          <div className="text-[10px] text-[var(--app-foreground-muted)]">USDC Balance (Base)</div>
+          <div className="text-sm font-medium">{usdcBalance === "-" ? "–" : `${usdcBalance} USDC`}</div>
+        </div>
+        {address && (
+          <>
+            <div className="p-3 rounded-md border border-[var(--app-card-border)] bg-[var(--app-card-bg)]">
+              <div className="text-[10px] text-[var(--app-foreground-muted)]">USDC (Optimism)</div>
+              <div className="text-sm font-medium">{chainUsdcBalances[10] ? `${chainUsdcBalances[10]} USDC` : "–"}</div>
+            </div>
+            <div className="p-3 rounded-md border border-[var(--app-card-border)] bg-[var(--app-card-bg)]">
+              <div className="text-[10px] text-[var(--app-foreground-muted)]">USDC (Arbitrum)</div>
+              <div className="text-sm font-medium">{chainUsdcBalances[42161] ? `${chainUsdcBalances[42161]} USDC` : "–"}</div>
+            </div>
+            <div className="p-3 rounded-md border border-[var(--app-card-border)] bg-[var(--app-card-bg)]">
+              <div className="text-[10px] text-[var(--app-foreground-muted)]">USDC (Ethereum)</div>
+              <div className="text-sm font-medium">{chainUsdcBalances[1] ? `${chainUsdcBalances[1]} USDC` : "–"}</div>
+            </div>
+          </>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         <div className="p-3 rounded-md border border-[var(--app-card-border)] bg-[var(--app-card-bg)]">
