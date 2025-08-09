@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { parseEther } from "viem";
@@ -15,12 +15,16 @@ import {
   type TransactionResponse,
 } from "@coinbase/onchainkit/transaction";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 
 export default function CopyPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { address } = useAccount();
   const [quantityEth, setQuantityEth] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const isValidQty = useMemo(() => {
     const n = Number(quantityEth);
@@ -63,18 +67,31 @@ export default function CopyPage() {
 
         <Transaction
           calls={calls}
-          onSuccess={(_r: TransactionResponse) => router.push("/portfolio")}
+          onSuccess={(_r: TransactionResponse) => {
+            try {
+              const prev = JSON.parse(localStorage.getItem("copyActivity") || "[]");
+              prev.push({ id: params?.id, qtyEth: quantityEth, ts: Date.now() });
+              localStorage.setItem("copyActivity", JSON.stringify(prev));
+            } catch {}
+            router.push("/portfolio");
+          }}
           onError={(_e: TransactionError) => {}}
         >
           <TransactionButton
             className="h-11 w-full rounded-lg bg-[var(--app-accent)] text-[var(--app-background)] text-sm font-medium hover:bg-[var(--app-accent-hover)] disabled:opacity-50"
             disabled={!isValidQty}
           />
-          <TransactionToast className="mt-2">
-            <TransactionToastIcon />
-            <TransactionToastLabel />
-            <TransactionToastAction />
-          </TransactionToast>
+          {mounted &&
+            createPortal(
+              <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+56px)] z-[60] w-[calc(100%-32px)] max-w-md px-2">
+                <TransactionToast className="w-full">
+                  <TransactionToastIcon />
+                  <TransactionToastLabel />
+                  <TransactionToastAction />
+                </TransactionToast>
+              </div>,
+              document.body,
+            )}
         </Transaction>
       </div>
     </div>
