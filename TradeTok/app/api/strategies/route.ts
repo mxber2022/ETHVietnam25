@@ -29,6 +29,7 @@ export async function GET() {
       "https://base-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t";
     const client = createPublicClient({ chain: base, transport: http(rpcUrl) });
 
+    //@ts-ignore
     let total = 0n;
     try {
       total = (await client.readContract({
@@ -67,7 +68,9 @@ export async function GET() {
       const id = start + idx;
       const riskIdx = Number(s.risk || s[4] || 0);
       const risk: ApiStrategy["riskLevel"] = riskIdx === 0 ? "Low" : riskIdx === 1 ? "Medium" : "High";
+      //@ts-ignore
       const entryMinRaw = (s.entryMinUsd ?? s[5] ?? 0n) as bigint;
+      //@ts-ignore
       const entryMaxRaw = (s.entryMaxUsd ?? s[6] ?? 0n) as bigint;
       const tokenAddr = ((s.token ?? s[3]) as string | undefined)?.toLowerCase() as `0x${string}` | undefined;
 
