@@ -16,11 +16,14 @@ import {
   TransactionStatusAction,
   TransactionStatusLabel,
 } from "@coinbase/onchainkit/transaction";
-import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from "@coinbase/onchainkit/wallet";
-import { Identity, Name } from "@coinbase/onchainkit/identity";
-import { useAccount } from "wagmi";
-import { encodeFunctionData } from "viem";
+import ConnectButton from "@/app/components/ConnectButton";
+import { useAccount, useWalletClient } from "wagmi";
+import { encodeFunctionData, createPublicClient, http } from "viem";
+import { zircuit } from "viem/chains";
 import { STRATEGY_REGISTRY_ADDRESS, STRATEGY_REGISTRY_ABI } from "@/lib/contracts/strategyRegistry";
+import { ethers } from "ethers";
+import { useAppKitProvider } from "@reown/appkit/react";
+import { providers, Contract } from "ethers";
 
 const TOKENS = [
   { symbol: "ETH", label: "Ethereum (ETH)" },
@@ -46,8 +49,11 @@ export default function NewStrategyPage() {
   const [usePerps, setUsePerps] = useState(false);
   const [leverage, setLeverage] = useState(2);
   // tags removed for minimal form
-  const { isConnected } = useAccount();
-
+  const { isConnected, address } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const [publishingZircuit, setPublishingZircuit] = useState(false);
+  const { walletProvider } = useAppKitProvider('eip155');
+  
   const entryRangeValid = useMemo(() => {
     if (entryMin === "" || entryMax === "") return false;
     const min = Number(entryMin);
@@ -103,6 +109,100 @@ export default function NewStrategyPage() {
     }
   }, [canPublish, entryMax, entryMin, risk, stopLoss, strategyUri, title, tokenAddress]);
 
+
+
+  // async function publishOnZircuit() {
+  //   if (!address || !canPublish) return;
+  //   try {
+  //     setPublishingZircuit(true);
+      
+  //     // Use AppKit's ethers adapter for WalletConnect
+  //     const appkit = (window as any).appkit;
+  //     if (!appkit) {
+  //       console.error("AppKit not available");
+  //       setPublishingZircuit(false);
+  //       return;
+  //     }
+
+  //     // Get the ethers provider and signer from AppKit
+  //     const provider = appkit.provider;
+  //     const signer = appkit.signer;
+      
+  //     if (!provider || !signer) {
+  //       console.error("AppKit provider or signer not available");
+  //       setPublishingZircuit(false);
+  //       return;
+  //     }
+
+  //     // Create contract instance with ethers
+  //     const contract = new ethers.Contract(STRATEGY_REGISTRY_ADDRESS, STRATEGY_REGISTRY_ABI, signer);
+      
+  //     // Prepare transaction data
+  //     const txData = contract.interface.encodeFunctionData("createStrategy", [
+  //       title,
+  //       strategyUri,
+  //       tokenAddress,
+  //       riskToUint(risk),
+  //       scaleUsd6(Number(entryMin)),
+  //       scaleUsd6(Number(entryMax)),
+  //       Math.round(stopLoss * 100),
+  //     ]);
+
+  //     // Send transaction through WalletConnect
+  //     const tx = await signer.sendTransaction({
+  //       to: STRATEGY_REGISTRY_ADDRESS,
+  //       data: txData,
+  //       value: ethers.utils.parseEther("0"),
+  //     });
+      
+  //     console.info("[zircuit] txHash", tx.hash);
+  //     // simple redirect; toast is handled by OnchainKit path otherwise
+  //     router.push("/feed");
+  //   } catch (e) {
+  //     console.error("[zircuit] publish error", e);
+  //     setPublishingZircuit(false);
+  //   }
+  // }
+
+async function publishOnZircuit() {
+  if (!address || !canPublish || !walletProvider) return;
+
+  try {
+    setPublishingZircuit(true);
+
+    // Use the AppKit wallet provider for WalletConnect
+    const ethersProvider = new providers.Web3Provider(walletProvider);
+    const signer = ethersProvider.getSigner();
+
+    // 🔹 Create contract instance
+    const contract = new Contract(
+      STRATEGY_REGISTRY_ADDRESS,
+      STRATEGY_REGISTRY_ABI,
+      signer
+    );
+
+    // 🔹 Send transaction
+    const tx = await contract.createStrategy(
+      title,
+      strategyUri,
+      tokenAddress,
+      riskToUint(risk),
+      scaleUsd6(Number(entryMin)),
+      scaleUsd6(Number(entryMax)),
+      Math.round(stopLoss * 100)
+    );
+
+    console.info("[zircuit] txHash", tx.hash);
+    await tx.wait();
+
+    router.push("/feed");
+  } catch (e) {
+    console.error("[zircuit] publish error", e);
+    setPublishingZircuit(false);
+  }
+}
+
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -111,23 +211,7 @@ export default function NewStrategyPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-lg font-semibold">Create Strategy</div>
-        {/* <Wallet>
-          <ConnectWallet>
-            {isConnected ? (
-              <Identity className="px-3 py-1.5 text-sm">
-                <Name />
-              </Identity>
-            ) : (
-              <span className="text-sm">Connect</span>
-            )}
-          </ConnectWallet>
-          <WalletDropdown>
-            <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-              <Name />
-            </Identity>
-            <WalletDropdownDisconnect />
-          </WalletDropdown>
-        </Wallet> */}
+        <ConnectButton />
       </div>
       <form onSubmit={submit} className="space-y-3 glass rounded-xl p-3">
         <div className="space-y-2">
@@ -295,6 +379,7 @@ export default function NewStrategyPage() {
           </button>
           <Transaction
             calls={calls}
+            chainId={8453} // Base chain ID for Farcaster
             onSuccess={(r: TransactionResponse) => router.push("/feed")}
             onError={(e: TransactionError) => console.error(e)}
           >
@@ -314,6 +399,18 @@ export default function NewStrategyPage() {
                 document.body,
               )}
           </Transaction>
+        </div>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={publishOnZircuit}
+            disabled={!canPublish || !walletProvider || publishingZircuit}
+            className="h-11 w-full rounded-lg border border-[var(--app-card-border)] text-sm font-medium hover:bg-[var(--app-accent-light)] disabled:opacity-50"
+          >
+            {publishingZircuit ? "Publishing on Zircuit…" : "Publish on Zircuit (WalletConnect)"}
+          </button>
+          <p className="text-[10px] text-[var(--app-foreground-muted)]">Uses your WalletConnect session to add/switch to Zircuit and publish directly.</p>
         </div>
 
         {/* Preview removed per product decision */}

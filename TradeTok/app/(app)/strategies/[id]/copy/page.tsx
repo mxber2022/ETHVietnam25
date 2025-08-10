@@ -40,6 +40,15 @@ export default function CopyPage() {
 
   useEffect(() => setMounted(true), []);
 
+  // Monitor chain changes
+  useEffect(() => {
+    if (mounted && src && currentChainId === src.chainId) {
+      console.log('[chain] successfully switched to', currentChainId);
+      setSwitchError(null);
+      setSwitching(false);
+    }
+  }, [mounted, src, currentChainId]);
+
   const isValidQty = useMemo(() => {
     const n = Number(quantityEth);
     return Number.isFinite(n) && n > 0;
@@ -93,7 +102,7 @@ export default function CopyPage() {
   }
 
   const calls = useMemo(() => {
-    if (!address || !isValidQty) return [] as { to: `0x${string}`; data: `0x${string}`; value?: bigint }[];
+    if (!mounted || !address || !isValidQty) return [] as { to: `0x${string}`; data: `0x${string}`; value?: bigint }[];
     try {
       return [
         {
@@ -105,7 +114,7 @@ export default function CopyPage() {
     } catch {
       return [];
     }
-  }, [address, isValidQty, quantityEth]);
+  }, [mounted, address, isValidQty, quantityEth]);
 
   return (
     <div className="space-y-4">
@@ -128,7 +137,7 @@ export default function CopyPage() {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            disabled={!address || !isValidAmount}
+            disabled={!mounted || !address || !isValidAmount}
             onClick={async () => {
               if (!address || !isValidAmount) return;
               try {
@@ -175,7 +184,7 @@ export default function CopyPage() {
             }}
             className="text-xs px-3 py-2 rounded-md border border-[var(--app-card-border)] hover:bg-[var(--app-accent-light)] disabled:opacity-50"
           >
-            {address ? "Find & estimate" : "Connect wallet"}
+            {mounted && address ? "Find & estimate" : "Connect wallet"}
           </button>
         </div>
         {estimate && (
@@ -192,33 +201,58 @@ export default function CopyPage() {
             )}
           </div>
         )}
-        {src && execTx && (
+        {mounted && src && execTx && (
           <div className="space-y-2">
             {currentChainId !== src.chainId && (
-              <button
-                type="button"
-                disabled={switching}
-                onClick={async () => {
-                  if (!src) return;
-                  setSwitchError(null);
-                  setSwitching(true);
-                  try {
-                    await switchChainAsync({ chainId: src.chainId });
-                  } catch (e) {
-                    console.warn('[switch] error', e);
-                    setSwitchError('Wallet did not switch. Open your wallet, switch network manually, then return.');
-                  } finally {
-                    setSwitching(false);
-                  }
-                }}
-                className="w-full h-10 rounded-md border border-[var(--app-card-border)] hover:bg-[var(--app-accent-light)] text-sm disabled:opacity-50"
-              >
-                {switching ? 'Switching…' : `Switch to ${src.chainId === 8453 ? 'Base' : src.chainId === 1 ? 'Mainnet' : src.chainId === 10 ? 'Optimism' : src.chainId === 42161 ? 'Arbitrum' : `Chain ${src.chainId}`}`}
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={switching}
+                  onClick={async () => {
+                    if (!src) return;
+                    setSwitchError(null);
+                    setSwitching(true);
+                    try {
+                      console.log('[switch] attempting to switch to chain', src.chainId);
+                      const result = await switchChainAsync({ chainId: src.chainId });
+                      console.log('[switch] switch result', result);
+                      // Wait a bit for the switch to take effect
+                      setTimeout(() => {
+                        console.log('[switch] checking if switch took effect, current chain:', currentChainId);
+                        setSwitching(false);
+                      }, 2000);
+                    } catch (e) {
+                      console.warn('[switch] error', e);
+                      setSwitchError(`Failed to switch to ${src.chainId === 8453 ? 'Base' : src.chainId === 1 ? 'Mainnet' : src.chainId === 10 ? 'Optimism' : src.chainId === 42161 ? 'Arbitrum' : `Chain ${src.chainId}`}. Please switch manually in your wallet.`);
+                      setSwitching(false);
+                    }
+                  }}
+                  className="w-full h-10 rounded-md border border-[var(--app-card-border)] hover:bg-[var(--app-accent-light)] text-sm disabled:opacity-50"
+                >
+                  {switching ? 'Switching…' : `Switch to ${src.chainId === 8453 ? 'Base' : src.chainId === 1 ? 'Mainnet' : src.chainId === 10 ? 'Optimism' : src.chainId === 42161 ? 'Arbitrum' : `Chain ${src.chainId}`}`}
+                </button>
+                
+                <div className="text-[10px] text-[var(--app-foreground-muted)] text-center">
+                  If switching doesn't work, manually change your wallet network to {src.chainId === 8453 ? 'Base' : src.chainId === 1 ? 'Mainnet' : src.chainId === 10 ? 'Optimism' : src.chainId === 42161 ? 'Arbitrum' : `Chain ${src.chainId}`}
+                </div>
+              </div>
             )}
 
             {switchError && (
-              <div className="text-[11px] text-red-500">{switchError}</div>
+              <div className="space-y-2">
+                <div className="text-[11px] text-red-500">{switchError}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSwitchError(null);
+                    // Force a re-render to check current chain
+                    window.location.reload();
+                  }}
+                  className="w-full text-xs px-3 py-2 rounded-md border border-[var(--app-card-border)] hover:bg-[var(--app-accent-light)]"
+                >
+                  Refresh after switching
+                </button>
+              </div>
             )}
 
             {needsApproval && currentChainId === src.chainId && (
@@ -247,54 +281,37 @@ export default function CopyPage() {
             )}
 
             {!needsApproval && currentChainId === src.chainId && (
-              <button
-                type="button"
-                disabled={!walletClient || executing}
-                onClick={async () => {
-                  if (!walletClient || !execTx || !address) return;
-                  try {
-                    setExecuting(true);
-                    console.log('[execute] sending tx', { to: execTx.to, value: execTx.value.toString() });
-                    const targetChain = execTx.chainId === 8453 ? base : execTx.chainId === 1 ? mainnet : execTx.chainId === 10 ? optimism : execTx.chainId === 42161 ? arbitrum : undefined;
-                    let hash: `0x${string}`;
-                    if (execTx.chainId === 10 || execTx.chainId === 42161) {
-                      // Force legacy tx on OP/Arb to avoid eth_createAccessList
-                      const rpc = execTx.chainId === 10
-                        ? (process.env.NEXT_PUBLIC_OPTIMISM_RPC || "https://opt-mainnet.g.alchemy.com/v2/kaFl069xyvy3np41aiUXwjULZrF67--t")
-                        : undefined;
-                      const pc = createPublicClient({ chain: targetChain!, transport: http(rpc) });
-                      const gasPrice = await pc.getGasPrice();
-                      hash = await walletClient.sendTransaction({
-                        to: execTx.to,
-                        data: execTx.data,
-                        value: execTx.value,
-                        account: address as `0x${string}`,
-                        chain: targetChain,
-                        type: 'legacy',
-                        gasPrice,
-                      });
-                    } else {
-                      hash = await walletClient.sendTransaction({
-                        to: execTx.to,
-                        data: execTx.data,
-                        value: execTx.value,
-                        account: address as `0x${string}`,
-                        chain: targetChain,
-                      });
-                    }
-                    console.info('[execute] txHash', hash);
-                    setShowSuccess(true);
-                    setTimeout(() => setShowSuccess(false), 2000);
-                    setExecuting(false);
-                  } catch (e) {
-                    console.error('[execute] send error', e);
-                    setExecuting(false);
-                  }
+              <Transaction
+                chainId={src.chainId}
+                calls={[{
+                  to: execTx.to,
+                  data: execTx.data,
+                  value: execTx.value,
+                }]}
+                onSuccess={(result: TransactionResponse) => {
+                  console.info('[execute] success', result);
+                  setShowSuccess(true);
+                  setTimeout(() => setShowSuccess(false), 2000);
                 }}
-                className="h-11 w-full rounded-lg bg-[var(--app-accent)] text-[var(--app-background)] text-sm font-medium hover:bg-[var(--app-accent-hover)] disabled:opacity-50"
+                onError={(error: TransactionError) => {
+                  console.error('[execute] error', error);
+                }}
               >
-                {executing ? 'Executing…' : 'Execute'}
-              </button>
+                <TransactionButton 
+                  className="h-11 w-full rounded-lg bg-[var(--app-accent)] text-[var(--app-background)] text-sm font-medium hover:bg-[var(--app-accent-hover)] disabled:opacity-50"
+                />
+                {mounted &&
+                  createPortal(
+                    <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+56px)] z-[60] w-[calc(100%-32px)] max-w-md px-2">
+                      <TransactionToast className="w-full">
+                        <TransactionToastIcon />
+                        <TransactionToastLabel />
+                        <TransactionToastAction />
+                      </TransactionToast>
+                    </div>,
+                    document.body,
+                  )}
+              </Transaction>
             )}
           </div>
         )}

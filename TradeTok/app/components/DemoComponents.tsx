@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import {
   Transaction,
@@ -389,6 +389,11 @@ function TodoList() {
 
 function TransactionCard() {
   const { address } = useAccount();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Example transaction call - sending 0 ETH to self
   const calls = useMemo(() => address
@@ -431,7 +436,7 @@ function TransactionCard() {
         </p>
 
         <div className="flex flex-col items-center">
-          {address ? (
+          {mounted && address ? (
             <Transaction
               calls={calls}
               onSuccess={handleSuccess}
