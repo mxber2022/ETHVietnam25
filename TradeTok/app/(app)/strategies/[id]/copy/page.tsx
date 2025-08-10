@@ -156,7 +156,7 @@ export default function CopyPage() {
                     srcToken: srcFound.token,
                     srcAmountWei: amountMicro.toString(),
                     destToken: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // ETH
-                    destChainId: 8453,
+                    destChainId: 48900,
                     slippageBps: 100,
                     userAccount: address,
                     destReceiver: address,
