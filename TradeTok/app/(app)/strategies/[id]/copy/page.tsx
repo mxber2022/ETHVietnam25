@@ -132,7 +132,7 @@ export default function CopyPage() {
             onChange={(e) => setAmountUsdc(e.target.value)}
             className="w-full px-3 py-2 bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-md"
           />
-          <p className="mt-1 text-[10px] text-[var(--app-foreground-muted)]">Finds USDC on Base/Optimism/Arbitrum/Mainnet and estimates USDC→ETH to Base.</p>
+          <p className="mt-1 text-[10px] text-[var(--app-foreground-muted)]"></p>
         </div>
         <div className="flex items-center justify-between">
           <button
