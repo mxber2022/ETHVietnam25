@@ -24,8 +24,8 @@ TradeTok is a mobile-first DeFi social trading app that blends TikTok-style vide
 
 ## Smart Contracts
 
-base  - 0x8fd308C3F8596b5d4b563dc530DD84eBE69da656
-Zircuit - 0x8fd308C3F8596b5d4b563dc530DD84eBE69da656
+base mainnet - 0x8fd308C3F8596b5d4b563dc530DD84eBE69da656
+Zircuit mainnet - 0x8fd308C3F8596b5d4b563dc530DD84eBE69da656
 
 - StrategyRegistry (deployed, Base):
   - Address: `0x8fd308C3F8596b5d4b563dc530DD84eBE69da656`
