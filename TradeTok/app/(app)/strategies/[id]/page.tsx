@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import { mockStrategies } from "@/lib/mock";
 import Link from "next/link";
 
-export default function StrategyDetail({ params }: { params: { id: string } }) {
-  const strat = mockStrategies.find((s) => s.id === params.id);
+export default async function StrategyDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const strat = mockStrategies.find((s) => s.id === id);
   if (!strat) return notFound();
   return (
     <div className="space-y-4">
